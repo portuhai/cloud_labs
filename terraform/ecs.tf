@@ -58,6 +58,15 @@ resource "aws_ecs_task_definition" "app" {
       name  = "DATABASE_URL"
       value = "postgresql://${aws_db_instance.postgres.username}:${aws_db_instance.postgres.password}@${aws_db_instance.postgres.endpoint}/${aws_db_instance.postgres.db_name}"
     }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = "/ecs/cloud-lab-app"
+        "awslogs-region"        = "eu-central-1"
+        "awslogs-stream-prefix" = "ecs"
+        "awslogs-create-group"  = "true"
+      }
+    }
   }])
 }
 
