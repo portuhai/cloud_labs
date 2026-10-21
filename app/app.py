@@ -4,8 +4,7 @@ from flask_restx import Api, Resource
 import psycopg2
 
 app = Flask(__name__)
-api = Api(app, version='1.0', title='cloud lab1 API', description='REST API fot lab1')
-
+api = Api(app, version='1.0', title='cloud lab1 API - UPDATED BY ALINA', description='CI/CD pipeline test successful!')
 ns = api.namespace('api', description='main operations')
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres:mysecretpassword@db:5432/appdb')
