@@ -1,7 +1,7 @@
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1", "ae5c7863f890e0c1f6b553e206e23293e62f033a"]
 }
 
 resource "aws_iam_role" "github_actions" {
@@ -17,7 +17,7 @@ resource "aws_iam_role" "github_actions" {
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringLike = {
-          "token.actions.githubusercontent.com:sub" = "repo:portuhai/cloud_labs:*"
+          "token.actions.githubusercontent.com:sub": "repo:portuhai/cloud_labs:*"
         }
       }
     }]
