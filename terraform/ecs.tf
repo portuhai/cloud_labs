@@ -33,7 +33,7 @@ resource "aws_iam_role" "ecs_execution_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_execution" {
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
@@ -45,7 +45,7 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-
+  
   container_definitions = jsonencode([{
     name      = "api-container"
     image     = "${aws_ecr_repository.app.repository_url}:latest"
@@ -64,7 +64,6 @@ resource "aws_ecs_task_definition" "app" {
         "awslogs-group"         = "/ecs/cloud-lab-app"
         "awslogs-region"        = "eu-central-1"
         "awslogs-stream-prefix" = "ecs"
-        "awslogs-create-group"  = "true"
       }
     }
   }])
@@ -88,4 +87,9 @@ resource "aws_ecs_service" "main" {
     container_name   = "api-container"
     container_port   = 5000
   }
+}
+
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  name              = "/ecs/cloud-lab-app"
+  retention_in_days = 7
 }
