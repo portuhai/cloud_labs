@@ -1,5 +1,10 @@
 resource "aws_ecs_cluster" "main" {
   name = "cloud-lab-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 resource "aws_security_group" "ecs_sg" {

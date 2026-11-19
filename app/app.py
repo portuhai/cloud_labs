@@ -19,7 +19,6 @@ AWS_REGION = os.environ.get("AWS_REGION", "eu-central-1")
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-fallback-secret-change-in-prod")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
-# Підключення до Redis
 try:
     redis_client = redis.Redis.from_url(REDIS_URL)
     redis_client.ping()
@@ -27,7 +26,6 @@ except Exception as e:
     print(f"Redis connection warning: {e}")
     redis_client = None
 
-# Клієнт AWS SQS (якщо вказано URL черги)
 sqs_client = boto3.client("sqs", region_name=AWS_REGION) if SQS_QUEUE_URL else None
 
 CACHE_TTL = 45
@@ -184,7 +182,6 @@ class DataResource(Resource):
                     MessageBody=json.dumps(payload),
                 )
             else:
-                # Резервний шлях для локального запуску без налаштованого SQS
                 with get_db_connection() as conn:
                     with conn.cursor() as cur:
                         cur.execute(

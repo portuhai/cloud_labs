@@ -48,7 +48,6 @@ def process_message(body_str: str):
                 ADD COLUMN IF NOT EXISTS request_id TEXT UNIQUE;
                 """
             )
-            # Ідемпотентний запис: при повторній доставці того самого request_id дублікат не створиться
             cur.execute(
                 """
                 INSERT INTO messages (request_id, text)
@@ -90,7 +89,6 @@ def run_worker():
                     )
                     print(f"Processed and deleted message: {msg.get('MessageId')}")
                 except Exception as e:
-                    # Не видаляємо повідомлення з черги при помилці — після visibility timeout воно повернеться
                     print(f"Failed to process message {msg.get('MessageId')}: {e}")
         except Exception as e:
             print(f"SQS poll error: {e}")
