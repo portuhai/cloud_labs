@@ -2,43 +2,72 @@ resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support   = true
+
+  tags = {
+    Name = "cloud-lab-vpc"
+  }
 }
 
 resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "eu-central-1a"
+  availability_zone       = "${var.aws_region}a"
   map_public_ip_on_launch = true
+
+  tags = {
+    Name = "cloud-lab-public-a"
+  }
 }
 
 resource "aws_subnet" "public_b" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.2.0/24"
-  availability_zone       = "eu-central-1b"
+  availability_zone       = "${var.aws_region}b"
   map_public_ip_on_launch = true
+
+  tags = {
+    Name = "cloud-lab-public-b"
+  }
 }
 
 resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.10.0/24"
-  availability_zone = "eu-central-1a"
+  availability_zone = "${var.aws_region}a"
+
+  tags = {
+    Name = "cloud-lab-private-a"
+  }
 }
 
 resource "aws_subnet" "private_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.11.0/24"
-  availability_zone = "eu-central-1b"
+  availability_zone = "${var.aws_region}b"
+
+  tags = {
+    Name = "cloud-lab-private-b"
+  }
 }
 
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "cloud-lab-igw"
+  }
 }
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
+
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.gw.id
+  }
+
+  tags = {
+    Name = "cloud-lab-public-rt"
   }
 }
 

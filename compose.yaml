@@ -2,24 +2,59 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: appdb
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localdevpass}
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-appdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
   api:
     build: ./app
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=postgresql://postgres:mysecretpassword@db:5432/appdb
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdevpass}@db:5432/${POSTGRES_DB:-appdb}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-local-jwt-secret-key}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
     depends_on:
-      - db
-    restart: always
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: ./app
+    command: ["python", "worker.py"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdevpass}@db:5432/${POSTGRES_DB:-appdb}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata:

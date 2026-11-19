@@ -3,8 +3,9 @@ resource "aws_ecs_cluster" "main" {
 }
 
 resource "aws_security_group" "ecs_sg" {
-  name   = "ecs-task-sg"
-  vpc_id = aws_vpc.main.id
+  name        = "ecs-task-sg"
+  description = "Allow inbound traffic from ALB only"
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     from_port       = 5000
@@ -23,6 +24,7 @@ resource "aws_security_group" "ecs_sg" {
 
 resource "aws_iam_role" "ecs_execution_role" {
   name = "ecsExecutionRole"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -38,6 +40,11 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  name              = "/ecs/cloud-lab-app"
+  retention_in_days = 7
+}
+
 resource "aws_ecs_task_definition" "app" {
   family                   = "cloud-lab-task"
   network_mode             = "awsvpc"
@@ -45,24 +52,43 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
+
   container_definitions = jsonencode([{
     name      = "api-container"
-    image     = "${aws_ecr_repository.app.repository_url}:latest"
+    image     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
     essential = true
     portMappings = [{
       containerPort = 5000
       hostPort      = 5000
     }]
-    environment = [{
-      name  = "DATABASE_URL"
-      value = "postgresql://${aws_db_instance.postgres.username}:${aws_db_instance.postgres.password}@${aws_db_instance.postgres.endpoint}/${aws_db_instance.postgres.db_name}"
-    }]
+    environment = [
+      {
+        name  = "DATABASE_URL"
+        value = "postgresql://${aws_db_instance.postgres.username}:${var.db_password}@${aws_db_instance.postgres.endpoint}/${aws_db_instance.postgres.db_name}"
+      },
+      {
+        name  = "JWT_SECRET"
+        value = var.jwt_secret
+      },
+      {
+        name  = "ADMIN_PASSWORD"
+        value = var.admin_password
+      },
+      {
+        name  = "SQS_QUEUE_URL"
+        value = aws_sqs_queue.messages_queue.url
+      },
+      {
+        name  = "AWS_REGION"
+        value = var.aws_region
+      }
+    ]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
-        "awslogs-group"         = "/ecs/cloud-lab-app"
-        "awslogs-region"        = "eu-central-1"
+        "awslogs-group"         = aws_cloudwatch_log_group.ecs_logs.name
+        "awslogs-region"        = var.aws_region
         "awslogs-stream-prefix" = "ecs"
       }
     }
@@ -87,9 +113,37 @@ resource "aws_ecs_service" "main" {
     container_name   = "api-container"
     container_port   = 5000
   }
+
+  depends_on = [aws_lb_listener.http]
+
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 }
 
-resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name              = "/ecs/cloud-lab-app"
-  retention_in_days = 7
+# --- AUTO SCALING ---
+resource "aws_appautoscaling_target" "ecs_target" {
+  max_capacity       = 3
+  min_capacity       = 1
+  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.main.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+}
+
+resource "aws_appautoscaling_policy" "ecs_policy_cpu" {
+  name               = "ecs-cpu-autoscaling-policy"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value       = 60.0
+    scale_in_cooldown  = 300
+    scale_out_cooldown = 60
+
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+  }
 }

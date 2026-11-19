@@ -17,7 +17,7 @@ resource "aws_iam_role" "github_actions" {
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringLike = {
-          "token.actions.githubusercontent.com:sub": "repo:portuhai/cloud_labs:*"
+          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
         }
       }
     }]
@@ -30,5 +30,6 @@ resource "aws_iam_role_policy_attachment" "admin_attach" {
 }
 
 output "github_role_arn" {
-  value = aws_iam_role.github_actions.arn
+  value       = aws_iam_role.github_actions.arn
+  description = "ARN of the IAM role for GitHub Actions OIDC"
 }

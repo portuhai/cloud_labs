@@ -1,6 +1,7 @@
 resource "aws_security_group" "alb_sg" {
-  name   = "alb-sg"
-  vpc_id = aws_vpc.main.id
+  name        = "alb-sg"
+  description = "Allow HTTP traffic from the internet"
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     from_port   = 80
@@ -33,9 +34,9 @@ resource "aws_lb_target_group" "app" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/health"
     healthy_threshold   = 2
-    unhealthy_threshold = 5
+    unhealthy_threshold = 3
     timeout             = 5
     interval            = 30
     matcher             = "200"
@@ -54,6 +55,6 @@ resource "aws_lb_listener" "http" {
 }
 
 output "alb_dns_name" {
-  value       = aws_lb.main.dns_name
-  description = "public adress for checking"
+  value       = "http://${aws_lb.main.dns_name}"
+  description = "Public URL for checking the deployed application"
 }
