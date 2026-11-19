@@ -82,6 +82,12 @@ def init_db():
                     );
                     """
                 )
+                cur.execute(
+                    """
+                    ALTER TABLE messages
+                    ADD COLUMN IF NOT EXISTS request_id TEXT UNIQUE;
+                    """
+                )
     except Exception as e:
         print(f"DB init warning: {e}")
 

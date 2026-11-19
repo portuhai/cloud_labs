@@ -42,6 +42,12 @@ def process_message(body_str: str):
                 );
                 """
             )
+            cur.execute(
+                """
+                ALTER TABLE messages
+                ADD COLUMN IF NOT EXISTS request_id TEXT UNIQUE;
+                """
+            )
             # Ідемпотентний запис: при повторній доставці того самого request_id дублікат не створиться
             cur.execute(
                 """
